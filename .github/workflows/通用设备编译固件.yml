@@ -96,6 +96,17 @@ jobs:
           df -hT ${PWD}
           echo "status=success" >> ${GITHUB_OUTPUT}
 
+      - name: Replace feeds.conf.default (use custom feeds)
+        run: |
+          cd openwrt/
+          if [ -f "${FEEDS_CONF}" ]; then
+            echo "Using custom feeds: ${FEEDS_CONF}"
+            cp "${FEEDS_CONF}" feeds.conf.default
+          else
+            echo "Custom FEEDS_CONF not found, using default."
+          fi
+
+
       - name: Update feeds
         run: cd openwrt/ && ./scripts/feeds update -a
 
@@ -106,16 +117,6 @@ jobs:
         id: package
         run: |
           cd openwrt/
-          
-          # 使用你自己的 config 文件
-          if [ -f "${CONFIG_FILE}" ]; then
-            echo "Using custom config: ${CONFIG_FILE}"
-            cp "${CONFIG_FILE}" .config
-          else
-            echo "Custom config not found: ${CONFIG_FILE}"
-            exit 1
-          fi
-          
           make defconfig
           make download -j8
           find dl -size -1024c -exec ls -l {} \;
