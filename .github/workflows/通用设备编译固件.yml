@@ -117,6 +117,13 @@ jobs:
         id: package
         run: |
           cd openwrt/
+          if [ -f "${CONFIG_FILE}" ]; then
+            echo "Using custom config: ${CONFIG_FILE}"
+            cp "${CONFIG_FILE}" .config
+          else
+            echo "Custom CONFIG_FILE not found!"
+            exit 1
+          fi
           make defconfig
           make download -j8
           find dl -size -1024c -exec ls -l {} \;
