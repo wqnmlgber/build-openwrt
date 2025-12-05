@@ -112,6 +112,37 @@ jobs:
 
       - name: Install feeds
         run: cd openwrt/ && ./scripts/feeds install -a
+
+
+      - name: Prepare Build Env (Fix GN build)
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            clang lld libc++-dev libc++abi-dev ninja-build python3 \
+            g++ gcc build-essential pkg-config
+
+          echo "export CC=clang" >> ~/.bashrc
+          echo "export CXX=clang++" >> ~/.bashrc
+          echo "export CXXFLAGS='-stdlib=libc++'" >> ~/.bashrc
+          echo "export LDFLAGS='-stdlib=libc++'" >> ~/.bashrc
+
+      - name: Apply Custom Config
+        run: |
+          cd openwrt/
+          if [ -f "${GITHUB_WORKSPACE}/${CONFIG_FILE}" ]; then
+            echo "Using custom config: ${GITHUB_WORKSPACE}/${CONFIG_FILE}"
+            cp "${GITHUB_WORKSPACE}/${CONFIG_FILE}" .config
+          else
+            echo "Custom CONFIG_FILE not found!"
+            exit 1
+          fi
+          make defconfig
+
+      - name: Build GN First
+        run: |
+          source ~/.bashrc
+          cd openwrt/
+          make package/gn/{clean,prepare,compile} V=s
         
       - name: Download package
         id: package
@@ -125,29 +156,6 @@ jobs:
              exit 1
            fi
           make defconfig
-      - name: Prepare Build Env (Fix GN build)
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            clang lld libc++-dev libc++abi-dev ninja-build python3 \
-            g++ gcc build-essential pkg-config
-
-          export CC=clang
-          export CXX=clang++
-          export CXXFLAGS="-stdlib=libc++"
-          export LDFLAGS="-stdlib=libc++"
-        
-          echo "export CC=clang" >> ~/.bashrc
-          echo "export CXX=clang++" >> ~/.bashrc
-          echo "export CXXFLAGS=\"-stdlib=libc++\"" >> ~/.bashrc
-          echo "export LDFLAGS=\"-stdlib=libc++\"" >> ~/.bashrc   
-
-      - name: Build GN First
-        run: |
-          source ~/.bashrc
-          make package/gn/{clean,prepare,compile} V=s || exit 1
-
-        
           make download -j8
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
